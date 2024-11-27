@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="27.955" height="28.992" viewBox="0 0 27.955 28.992">
+  <g id="Group_73716" data-name="Group 73716" transform="translate(-6998.288 -2277.126)">
+    <g id="Compose" transform="translate(7006 2281.832)">
+      <path id="Path_58419" data-name="Path 58419" d="M364.237,625.087v13.162H345V618h10.631" transform="translate(-345 -614.963)" fill="none" stroke="###FILL###" stroke-miterlimit="10" stroke-width="2"/>
+      <g id="Group_70095" data-name="Group 70095" transform="translate(7.534 0)">
+        <path id="Path_58420" data-name="Path 58420" d="M363.631,632.625l-3.748,2.864.606-4.678,5.534-9.585,3.143,1.814Z" transform="translate(-359.882 -616.556)" fill="none" stroke="###FILL###" stroke-miterlimit="10" stroke-width="2"/>
+        <path id="Path_58421" data-name="Path 58421" d="M377.3,616.607l-3.143-1.814,1.089-1.885a1.813,1.813,0,0,1,2.478-.664h0a1.814,1.814,0,0,1,.664,2.478Z" transform="translate(-366.933 -612)" fill="none" stroke="###FILL###" stroke-miterlimit="10" stroke-width="2"/>
+      </g>
+    </g>
+    <g id="Money" transform="translate(6999.288 2278.126)">
+      <circle id="Ellipse_541" data-name="Ellipse 541" cx="7.5" cy="7.5" r="7.5" fill="#fff" stroke="###FILL###" stroke-miterlimit="10" stroke-width="2"/>
+      <g id="Group_70078" data-name="Group 70078" transform="translate(5.818 4.376)">
+        <path id="Path_58291" data-name="Path 58291" d="M1080.244,2110.46a2.873,2.873,0,0,0-1.442-.46,1.553,1.553,0,0,0-1.544,1.348c0,.705.507,1.265,1.544,1.715,1.182.509,1.562.949,1.562,1.715a1.66,1.66,0,0,1-1.8,1.47,2.743,2.743,0,0,1-1.562-.49" transform="translate(-1077 -2110)" fill="none" stroke="###FILL###" stroke-miterlimit="10" stroke-width="1"/>
+      </g>
+      <line id="Line_535" data-name="Line 535" x1="0.961" y2="8.411" transform="translate(7.019 3.294)" fill="none" stroke="###FILL###" stroke-miterlimit="10" stroke-width="1"/>
+    </g>
+  </g>
+</svg>

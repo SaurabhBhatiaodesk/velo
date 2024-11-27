@@ -1,0 +1,135 @@
+@import './filsonpro/_fontface.css'
+
+$borderRadius: 12px
+
+#velo-version
+  position: fixed
+  bottom: 1px
+  left: 5px
+  font-size: 10px
+  color: $mediumGray
+  z-index: 9999999
+
+.auth-social-wrap
+  display: none
+  width: 100%
+  .title
+    padding: 14px 0
+    width: 100%
+    font-size: 14px
+    text-align: center
+    font-variant: small-caps
+    display: flex
+    flex: 10000 0 0%
+    align-items: center
+    justify-content: space-between
+    &::before, &::after
+      width: 138px
+      content: ''
+      height: 1px
+      background-color: $black
+
+.velo-form-btn
+  height: 48px
+  border-radius: 8px
+  color: white
+  font-weight: bold
+
+.rounded-borders
+  border-radius: $borderRadius
+
+.q-btn
+  border-radius: $borderRadius
+
+.rounded-filled-input
+  .q-field__control
+    background: $gray
+  .q-field__inner
+    overflow: hidden
+    border-radius: $borderRadius
+
+.velo-table
+  border: solid 1px $mediumLightGray
+  tbody
+    td
+      font-size: 14px
+  thead, tr, th, td
+    border-color: $mediumLightGray
+  .courier-logo
+    width: 90px
+.velo-table-head-first-title
+  padding-left: 60px
+.velo-table-first-cell-spacer
+  width: 45px
+
+.q-checkbox.velo-checkbox
+  .q-checkbox__bg
+    border-radius: 7px
+  .q-checkbox__inner--falsy
+    .q-checkbox__bg
+      border: solid 2px $mediumLightGray
+
+.q-field--filled
+  .q-field__control
+    border-radius: $borderRadius
+    &::before, &::after
+      display: none
+
+.q-menu
+  box-shadow: none
+  border: solid 1px $mediumLightGray
+  border-radius: $borderRadius
+
+// gmaps autocomplete
+.pac-container.pac-logo
+  border-radius: $borderRadius
+  border-width: 0px
+  box-shadow: none !important
+  &::after, .pac-icon
+    display: none !important
+
+.pac-item
+  cursor: pointer
+  padding: 0.5em
+  font-size: 16px
+  background: white
+  transition: background-color 300ms ease-in-out
+  will-change: background-color
+  &:hover
+    background: $mediumLightGray
+
+.pac-item-query
+  font-size: 16px
+
+.page-title
+  font-size: 28px
+  font-weight: bold
+
+.no-arrow
+  .q-field__append
+    display: none
+
+.velo-outlined-input
+  .q-field__control
+    border-radius: $borderRadius
+
+.required
+  position: relative
+  &::before
+    content: '*'
+    display: block
+    position: absolute
+    top: 5px
+    right: 5px
+    z-index: 1
+    color: $primaryRed
+    font-size: 13px
+
+.text-smaller
+  font-size: 9px
+  line-height: 2
+  text-align: justify
+  text-align-last: center
+
+.velo-returns-shadow
+  box-shadow: 0px 3px 6px rgba(0, 0, 0, 0.16)

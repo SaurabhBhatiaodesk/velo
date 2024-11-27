@@ -1,0 +1,13 @@
+{
+  "params": {
+    "include": ["spa"],
+    "icon": "icongenie/app_icon.png",
+    "quality": 12,
+    "padding": [0, 0],
+    "skipTrim": true,
+    "themeColor": "0076FF",
+    "pngColor": "FAFAFA",
+    "splashscreenColor": "FAFAFA",
+    "svgColor": "0076FF"
+  }
+}

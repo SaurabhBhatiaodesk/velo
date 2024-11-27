@@ -1,0 +1,20 @@
+# Push artifacts to ec2 destination using rsync 
+ 
+image: node:10.15.3
+
+pipelines:
+   branches:
+    release/AWS_ec2:
+      - step:
+          name: Deploy artifacts using rsync to $SERVER instance
+          script:
+            - echo "Deployment is done...!"
+            - pipe: atlassian/rsync-deploy:0.12.0
+              variables:
+                USER: 'ubuntu'
+                SERVER: 'ec2-51-16-44-181.il-central-1.compute.amazonaws.com'
+                REMOTE_PATH: '/tmp/source'
+                DEBUG: 'true'
+                LOCAL_PATH: '${BITBUCKET_CLONE_DIR}/'
+                EXTRA_ARGS: "--exclude=.bitbucket/ --exclude=.git/ --exclude=bitbucket-pipelines.yml --exclude=.gitignore"
+            - echo "Deployment is done...!"
