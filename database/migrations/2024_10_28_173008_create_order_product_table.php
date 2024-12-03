@@ -21,6 +21,7 @@ return new class extends Migration
             $table->string('image')->nullable();
             $table->unsignedBigInteger('order_id');
             $table->unsignedBigInteger('product_id');
+            $table->string('shopify_id')->nullable();
             $table->timestamps();
         });
     }

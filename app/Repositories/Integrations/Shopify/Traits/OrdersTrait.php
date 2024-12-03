@@ -544,20 +544,23 @@ trait OrdersTrait
      * @param float $price The amount of store credit to apply (default is 0).
      * @return \Illuminate\Http\JsonResponse The response containing success or error message.
      */
-    public function orderReplace($order_id, $price = 0)
+    public function orderReplace($order_id, $price = 0, $variants = [])
     {
         try {
-            // Eager load customer and currency to avoid multiple queries
-            $order = Order::with(['customer', 'currency','store'])->findOrFail($order_id);
 
-            $shopifyShop= $order->store->shopifyShop;
+            // Eager load customer, currency, store, and products to avoid multiple queries
+            $order = Order::with(['customer', 'currency', 'store', 'products'])->findOrFail($order_id);
+
+            $shopifyShop = $order->store->shopifyShop;
             $currency = $order->currency->iso;
             $orderCustomer = $order->customer;
-            
+
+
             // Fetch Shopify customer ID or create one if not present
             $customer_id = $orderCustomer->shopify_id ?? $this->getShopifyCustomerId($shopifyShop, $orderCustomer->email);
             if (!$customer_id) {
-                return response()->json(['error' => 'Customer ID not found.'], 404);
+                return $this->fail("Customer ID not found.");
+                //return response()->json(['error' => 'Customer ID not found.'], 404);
             }
 
             // Update the customer with Shopify ID if not already set
@@ -565,24 +568,45 @@ trait OrdersTrait
                 $orderCustomer->update(['shopify_id' => $customer_id]);
             }
 
-            // Prepare GraphQL variables and mutation for store credit
-            $mutation = $this->generateStoreCreditMutation();
-            $variables = $this->prepareCreditVariables($customer_id, $currency, $price);
+            // Step 1: Handle store credit (only if price is greater than 0)
+            if ($price > 0) {
+                $storeCreditMutation = $this->generateStoreCreditMutation();
+                $storeCreditVariables = $this->prepareCreditVariables($customer_id, $currency, $price);
 
-            // Execute GraphQL API request
-            $response = $this->makeGqlApiRequest($shopifyShop, $mutation, $variables);
-            dd($response);
-            return $response;
+                // Execute GraphQL API request for store credit
+                $storeCreditResponse = $this->makeGqlApiRequest($shopifyShop, $storeCreditMutation, $storeCreditVariables);
+                if (isset($storeCreditResponse['errors']) && !empty($storeCreditResponse['errors'])) {
+                    return $this->fail("Error processing store credit.");
+                    //return response()->json(['error' => 'Error processing store credit.'], 500);
+                }
+            }
+
+            // Step 2: Handle order creation
+            $orderCreateMutation = $this->orderCreateMutation();
+            $orderCreateVariables = $this->orderCreateVariables($customer_id, $currency, $order_id, $variants);
+
+
+            // Execute GraphQL API request for order creation
+            $orderCreateResponse = $this->makeGqlApiRequest($shopifyShop, $orderCreateMutation, $orderCreateVariables);
+            if (isset($orderCreateResponse['errors']) && !empty($orderCreateResponse['errors'])) {
+                return $this->fail("Error processing order creation.");
+                //return response()->json(['error' => 'Error processing order creation.'], 500);
+            }
+
+            // Return combined response or success message
+            return response()->json(['success' => 'Order replacement and store credit processed successfully.'], 200);
         } catch (ModelNotFoundException $e) {
             Log::error("Error: Customer, Order, or Currency not found. Order ID: {$order_id}.", [
                 'error' => $e->getMessage()
             ]);
-            return response()->json(['error' => 'Data not found.'], 404);
+            return $this->fail("Data not found.");
+            //return response()->json(['error' => 'Data not found.'], 404);
         } catch (\Exception $e) {
             Log::error("Unexpected error in orderReplace for Order ID: {$order_id}.", [
                 'error' => $e->getMessage()
             ]);
-            return response()->json(['error' => 'An error occurred while processing the request.'], 500);
+            return $this->fail("An error occurred while processing the request.");
+            //return response()->json(['error' => 'An error occurred while processing the request.'], 500);
         }
     }
 
@@ -598,21 +622,47 @@ trait OrdersTrait
                 }
             }
         }';
-    
+
         // Structure the variables as an associative array
         $variables = [
             'email' => $email, // Pass the email variable here
         ];
-    
+
         // Execute the GraphQL request
         $response = $this->makeGqlApiRequest($shopifyShop, $query, $variables);
         
         // Check if the customer was found and return the Shopify customer ID
         return optional($response['data']['customers']['edges'][0]['node']['id'])->replace("gid://shopify/Customer/", null);
     }
-    
-    
-    // Helper function to prepare variables for the GraphQL mutation
+
+    // Helper function to generate the store credit mutation query string
+    private function generateStoreCreditMutation()
+    {
+        return '
+            mutation storeCreditAccountCredit($id: ID!, $creditInput: StoreCreditAccountCreditInput!) {
+                storeCreditAccountCredit(id: $id, creditInput: $creditInput) {
+                    storeCreditAccountTransaction {
+                        amount {
+                            amount
+                            currencyCode
+                        }
+                        account {
+                            id
+                            balance {
+                                amount
+                                currencyCode
+                            }
+                        }
+                    }
+                    userErrors {
+                        message
+                        field
+                    }
+                }
+            }';
+    }
+
+    // Helper function to prepare variables for the store credit mutation
     private function prepareCreditVariables($customerId, $currency, $price)
     {
         return [
@@ -625,33 +675,86 @@ trait OrdersTrait
             ]
         ];
     }
-    
-    // Helper function to generate the store credit mutation query string
-    private function generateStoreCreditMutation()
+
+    // Helper function to create the order mutation query string
+    private function orderCreateMutation()
     {
         return '
-        mutation storeCreditAccountCredit($id: ID!, $creditInput: StoreCreditAccountCreditInput!) {
-            storeCreditAccountCredit(id: $id, creditInput: $creditInput) {
-                storeCreditAccountTransaction {
-                    amount {
-                        amount
-                        currencyCode
-                    }
-                    account {
-                        id
-                        balance {
-                            amount
-                            currencyCode
-                        }
-                    }
-                }
+            mutation OrderCreate($order: OrderCreateOrderInput!, $options: OrderCreateOptionsInput) {
+            orderCreate(order: $order, options: $options) {
                 userErrors {
-                    message
-                    field
+                field
+                message
+                }
+                order {
+                id
+                displayFinancialStatus
+                shippingAddress {
+                    lastName
+                    address1
+                    city
+                    provinceCode
+                    countryCode
+                    zip
+                }
+                billingAddress {
+                    lastName
+                    address1
+                    city
+                    provinceCode
+                    countryCode
+                    zip
+                }
+                customer {
+                    id
+                }
                 }
             }
-        }';
+            }';
     }
+
+    // Helper function to prepare the variables for the order creation mutation
+    private function orderCreateVariables($customerId, $currency, $order_id, $variants)
+    {
+        // Get the order's products and customer data from the $order object
+        $order = Order::with(['products', 'customer'])->findOrFail($order_id);
+        
+        // Debugging: Check the order's data (if needed)
+
+        // Prepare the lineItems array with the selected variants for replacement
+        $lineItems = [];
+
+        // Loop through the provided variants and create a line item for each one
+        foreach ($variants as $variant) {
+            // Ensure variant details (e.g., ID, quantity, price) are correctly passed
+            $lineItems[] = [
+                'variantId' => "gid://shopify/ProductVariant/{$variant['variant_id']}",  // Pass the variant_id
+                'quantity' => $variant['quantity'],  // Quantity of the selected variant
+                'priceSet' => [
+                    'shopMoney' => [
+                        'amount' => $variant['price'],  // Price for the replacement item
+                        'currencyCode' => $currency,   // Currency for the item
+                    ]
+                ],
+            ];
+        }
+
+        // Add customer information to the order variables
+        $customer = $order->customer;
+
+        // Return the updated order variables with dynamic lineItems and customer info
+        return [
+            'order' => [
+                'currency' => $currency,
+                'tags' => 'Replacement for order ' . $order->shopify_id,  // Add the original order ID as a tag
+                'lineItems' => $lineItems,  // Include the prepared line items for replacements
+                "customerId"=> "gid://shopify/Customer/{$order->customer->shopify_id}",
+            ]
+        ];
+    }
+
+
+
 
     
 }

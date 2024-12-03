@@ -36,28 +36,23 @@ trait GqlApiTrait
             $shopifyDomain = $shopifyShop->domain;
         }
 
-        // Log the token and domain
-        Log::info('Using Shopify token and domain:', [
-            'token' => $token,
-            'domain' => $shopifyDomain
-        ]);
-
+       
         if (!$baseUrl) {
             $baseUrl = '/admin/api/' . config('shopify.apiVersion') . '/graphql.json';
         }
 
         $baseUrl = 'https://' . $shopifyDomain . $baseUrl;
 
-        // Log the final base URL being used for the API request
-        Log::info('GraphQL Base URL:', ['baseUrl' => $baseUrl]);
+        
 
         return Http::baseUrl($baseUrl)
             ->withHeaders([
                 'X-Shopify-Access-Token' => $token,
                 'Content-Type' => 'application/json'
             ]);
-
-
+        
+   
+        
             
     }
 

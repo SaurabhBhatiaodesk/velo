@@ -20,6 +20,7 @@ class OrderProduct extends Model
         'image',
         'order_id',
         'product_id',
+        'shopify_id',
     ];
 
    

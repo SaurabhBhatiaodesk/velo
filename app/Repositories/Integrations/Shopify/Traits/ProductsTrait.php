@@ -70,67 +70,113 @@ trait ProductsTrait
 
 
 
-       /**
-     * Fetch product variant images from Shopify using GraphQL API.
-     *
-     * This method retrieves the images for all variants of a product from Shopify by making a GraphQL request.
-     * It returns an array of variant details, including image URLs, or an empty array if no images are found.
-     *
-     * @param object $shopifyShop The Shopify shop object containing the store's API credentials.
-     * @param string $shopifyProductId The Shopify product ID in the global ID (GID) format.
-     * @return array|null An array of product variants with image URLs, or null if no images are found.
-     * @throws \Exception Throws an exception if the GraphQL request fails or if any error occurs.
-     */
-    public function fetchProductVariantsImages($shopifyShop, $shopifyProductId)
+    /**
+ * Fetch product variant images from Shopify using GraphQL API.
+ *
+ * This method retrieves the images for either a product or its variants from Shopify.
+ * It uses a GraphQL request to fetch image URLs and returns an array of image URLs,
+ * or an empty array if no images are found.
+ *
+ * @param object $shopifyShop The Shopify shop object containing the store's API credentials.
+ * @param string $shopifyId The Shopify product or variant ID in the global ID (GID) format.
+ * @param bool $isVariant Flag to indicate if the request is for a product variant (defaults to false).
+ * 
+ * @return array|null An array of image URLs or an empty array if no images are found.
+ * @throws \Exception Throws an exception if the GraphQL request fails or any error occurs.
+ */
+    public function fetchProductVariantsImages($shopifyShop, $shopifyId, $isVariant = false)
     {
         try {
-            // Define the GraphQL query to fetch product variant images
+            // Define the GraphQL query to fetch images for either a product or a product variant
             $query = <<<GQL
-                 query getProductVariantsImages(\$productId: ID!) {
-                     product(id: \$productId) {  
-                     id
-                         variants(first: 100) { 
-                             edges {
-                                 node { 
-                                     id
-                                     title
-                                     displayName
-                                     image { 
-                                         src 
-                                     }
-                                 }
-                             }
-                         }
-                     }
-                 }
-             GQL;
- 
-            // Variables to be passed to the GraphQL query
+                query getProductImages(\$id: ID!) {
+                    node(id: \$id) {
+                        ... on Product {
+                            id
+                            variants(first: 100) {
+                                edges {
+                                    node {
+                                        id
+                                        title
+                                        displayName
+                                        image {
+                                            src
+                                        }
+                                    }
+                                }
+                            }
+                            images(first: 1) {
+                                edges {
+                                    node {
+                                        src
+                                    }
+                                }
+                            }
+                        }
+                        ... on ProductVariant {
+                            id
+                            title
+                            displayName
+                            image {
+                                src
+                            }
+                        }
+                    }
+                }
+            GQL;
+
+            // Define the variables for the GraphQL query
             $variables = [
-                'productId' => "gid://shopify/Product/{$shopifyProductId}" // Shopify Product ID in GID format
+                'id' => "gid://shopify/" . ($isVariant ? 'ProductVariant/' : 'Product/') . $shopifyId
             ];
- 
-            // Make the GraphQL API request
+
+            // Make the GraphQL API request using the given shop and product/variant ID
             $response = $this->makeGqlApiRequest($shopifyShop, $query, $variables);
- 
-            $variants = []; // Initialize an empty array to store variant data
-            // Check if the response contains variant data
-            if (isset($response['data']['product']['variants']['edges'])) {
-                // Loop through each variant edge and extract node data
-                foreach ($response['data']['product']['variants']['edges'] as $variantEdge) {
-                    $variants[] = $variantEdge['node']; // Add the variant node to the result array
+
+            // Initialize an array to store the images
+            $images = [];
+
+            // Check if the response contains the node data
+            if (isset($response['data']['node'])) {
+                $node = $response['data']['node'];
+
+                // If it's a product (not a variant), fetch the product image and variant images
+                if (!$isVariant) {
+                    // Fetch the product image if available
+                    if (isset($node['images']['edges'][0]['node']['src'])) {
+                        $images[] = $node['images']['edges'][0]['node']['src'];
+                    }
+
+                    // Check the variants of the product and fetch their images
+                    if (isset($node['variants']['edges'])) {
+                        foreach ($node['variants']['edges'] as $variantEdge) {
+                            // If a variant image exists, add it to the images array
+                            if (isset($variantEdge['node']['image']['src'])) {
+                                $images[] = $variantEdge['node']['image']['src'];
+                            }
+                        }
+                    }
+                } else {
+                    // If it's a product variant, fetch the variant image
+                    if (isset($node['image']['src'])) {
+                        $images[] = $node['image']['src'];
+                    }
                 }
             }
-            return $variants; // Return the array of variants with their images
- 
+
+            // Return the list of images found (either product or variant images)
+            return $images;
+
         } catch (\Exception $e) {
-            // Log the error in case of an exception
-            Log::error("Error fetching product variant images for product ID {$shopifyProductId}: " . $e->getMessage());
- 
-            // Throw a new exception with a user-friendly message
-            throw new \Exception("Product variant images fetch karne mein error: " . $e->getMessage());
+            // Log any errors that occur during the fetch process
+            Log::error("Product variant images fetch error: " . $e->getMessage());
+
+            // Return a failure message in case of an error
+            return $this->fail("Error fetching product variant images");
         }
     }
+
+     
 
     /**
      * Fetch Shopify Variant data by product ID.
@@ -183,8 +229,7 @@ trait ProductsTrait
             // Make the GraphQL request to Shopify
             $response = $this->makeGqlApiRequest($shopifyShop, $query, $variables);
 
-            // Log the response to inspect it further
-            Log::info('Shopify GraphQL Response:', ['response' => $response]);
+            
 
             // Check if the response contains data
             if (isset($response['data']['product']['variants']['edges']) && !empty($response['data']['product']['variants']['edges'])) {
@@ -218,7 +263,8 @@ trait ProductsTrait
                 ];
             } else {
                 Log::warning('No variants found for this product.', ['product_id' => $product_id]);
-                return ['error' => 'No variants found for this product.'];
+                return $this->fail("No variants found for this product.");
+                
             }
 
         } catch (\Exception $e) {
@@ -227,13 +273,9 @@ trait ProductsTrait
                 'error' => $e->getMessage(),
                 'product_id' => $product_id
             ]);
-
             // Return a friendly error message
-            return ['error' => 'An error occurred while fetching variants. Please try again later.'];
+            return $this->fail("An error occurred while fetching variants. Please try again later.");
         }
     }
-
-    
-
-    
+  
 }

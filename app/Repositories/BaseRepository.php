@@ -61,6 +61,7 @@ class BaseRepository
      * @param string $str
      * @return array|string
      */
+    
     protected function decodeEscapedJson($str)
     {
         if (preg_match('/\[\s*\{.*?\}\s*\]/s', $str, $matches)) {
